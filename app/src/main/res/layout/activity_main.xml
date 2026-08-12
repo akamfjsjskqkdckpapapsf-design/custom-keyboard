@@ -13,7 +13,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="إعدادات التسظير والتلقائي"
+            android:text="إعدادات التسطير والتلقائي"
             android:textColor="#FFFFFF"
             android:textSize="20sp"
             android:textStyle="bold"
@@ -36,7 +36,7 @@
             android:textColor="#FFFFFF"
             android:padding="12dp"
             android:hint="اكتب رمز أو كلمة التشغيل هنا..."
-            android:hintTextColor="#777777"
+            android:textColorHint="#777777"
             android:layout_marginBottom="16dp" />
 
         <!-- السطور والكليشة -->
@@ -56,7 +56,7 @@
             android:gravity="top|start"
             android:padding="12dp"
             android:hint="اكتب النص أو السطور هنا..."
-            android:hintTextColor="#777777"
+            android:textColorHint="#777777"
             android:layout_marginBottom="16dp" />
 
         <!-- سرعة الكتابة -->
@@ -120,7 +120,7 @@
                 android:textColor="#FFFFFF"
                 android:padding="10dp"
                 android:hint="مثال: @__819 أو يا حمد"
-                android:hintTextColor="#777777" />
+                android:textColorHint="#777777" />
         </LinearLayout>
 
         <!-- 3. تبديل المسافة بـ ~ للكتابة العادية -->
