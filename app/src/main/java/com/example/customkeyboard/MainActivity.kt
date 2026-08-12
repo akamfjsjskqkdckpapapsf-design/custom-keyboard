@@ -1,0 +1,54 @@
+package com.example.customkeyboard
+
+import android.content.Context
+import android.os.Bundle
+import android.widget.Button
+import android.widget.CheckBox
+import android.widget.EditText
+import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
+
+class MainActivity : AppCompatActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
+
+        val prefs = getSharedPreferences("KeyboardPrefs", Context.MODE_PRIVATE)
+
+        val etTriggerSymbol = findViewById<EditText>(R.id.etTriggerSymbol)
+        val etAutoText = findViewById<EditText>(R.id.etAutoText)
+        val etSpeed = findViewById<EditText>(R.id.etSpeed)
+        val cbEnableAuto = findViewById<CheckBox>(R.id.cbEnableAuto)
+        val cbReplaceSpaceInAuto = findViewById<CheckBox>(R.id.cbReplaceSpaceInAuto)
+        val etSuffixText = findViewById<EditText>(R.id.etSuffixText)
+        val cbReplaceSpaceGlobal = findViewById<CheckBox>(R.id.cbReplaceSpaceGlobal)
+        val btnSave = findViewById<Button>(R.id.btnSave)
+
+        // تحميل القيم المحفوظة
+        etTriggerSymbol.setText(prefs.getString("trigger_symbol", ""))
+        etAutoText.setText(prefs.getString("auto_text", ""))
+        etSpeed.setText(prefs.getInt("auto_speed", 50).toString())
+        cbEnableAuto.isChecked = prefs.getBoolean("enable_auto", false)
+        cbReplaceSpaceInAuto.isChecked = prefs.getBoolean("auto_replace_space", false)
+        etSuffixText.setText(prefs.getString("suffix_text", ""))
+        cbReplaceSpaceGlobal.isChecked = prefs.getBoolean("global_replace_space", false)
+
+        btnSave.setOnClickListener {
+            val speed = etSpeed.text.toString().toIntOrNull() ?: 50
+            
+            prefs.edit().apply {
+                putString("trigger_symbol", etTriggerSymbol.text.toString().trim())
+                putString("auto_text", etAutoText.text.toString())
+                putInt("auto_speed", speed)
+                putBoolean("enable_auto", cbEnableAuto.isChecked)
+                putBoolean("auto_replace_space", cbReplaceSpaceInAuto.isChecked)
+                putString("suffix_text", etSuffixText.text.toString())
+                putBoolean("global_replace_space", cbReplaceSpaceGlobal.isChecked)
+                apply()
+            }
+
+            Toast.makeText(this, "تم حفظ الإعدادات بنجاح!", Toast.LENGTH_SHORT).show()
+        }
+    }
+}
