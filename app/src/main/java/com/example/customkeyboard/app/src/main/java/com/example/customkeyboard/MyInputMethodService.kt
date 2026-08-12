@@ -7,6 +7,7 @@ import android.inputmethodservice.KeyboardView
 import android.os.Handler
 import android.os.Looper
 import android.view.View
+import com.example.customkeyboard.R
 
 class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardActionListener {
 
@@ -32,14 +33,14 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         val globalReplaceSpace = prefs.getBoolean("global_replace_space", false)
 
         when (primaryCode) {
-            -5 -> { // زر الحذف
+            -5 -> {
                 inputConnection.deleteSurroundingText(1, 0)
             }
-            -4 -> { // زر الإرسال / Enter
+            -4 -> {
                 inputConnection.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_ENTER))
                 inputConnection.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_ENTER))
             }
-            32 -> { // المسافة
+            32 -> {
                 if (globalReplaceSpace) {
                     inputConnection.commitText("~", 1)
                 } else {
@@ -50,7 +51,6 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
                 val charTyped = primaryCode.toChar().toString()
                 inputConnection.commitText(charTyped, 1)
 
-                // التحقق من رمز التشغيل الإجباري للأوتو
                 if (isAutoEnabled && triggerSymbol.isNotEmpty()) {
                     val beforeText = inputConnection.getTextBeforeCursor(triggerSymbol.length, 0)?.toString() ?: ""
                     if (beforeText == triggerSymbol) {
@@ -91,7 +91,6 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
 
                 val ic = currentInputConnection ?: break
                 
-                // مسح رمز التشغيل المكتوب
                 val triggerSymbol = prefs.getString("trigger_symbol", "") ?: ""
                 if (triggerSymbol.isNotEmpty()) {
                     ic.deleteSurroundingText(triggerSymbol.length, 0)
@@ -99,7 +98,6 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
 
                 ic.commitText(formattedLine, 1)
                 
-                // إرسال السطر تلقائياً
                 ic.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_ENTER))
                 ic.sendKeyEvent(android.view.KeyEvent(android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_ENTER))
 
