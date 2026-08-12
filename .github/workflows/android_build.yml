@@ -9,11 +9,10 @@ jobs:
       with:
         distribution: 'temurin'
         java-version: '17'
-    - name: Build APK with Gradle Action
-      uses: gradle/gradle-build-action@v3
-      with:
-        arguments: assembleDebug
-        gradle-version: 8.1.1
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+    - name: Build APK
+      run: gradle assembleDebug
     - uses: actions/upload-artifact@v4
       with:
         name: Keyboard-APK
