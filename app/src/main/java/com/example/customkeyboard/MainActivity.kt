@@ -1,14 +1,14 @@
 package com.example.customkeyboard
 
+import android.app.Activity
 import android.content.Context
 import android.os.Bundle
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -25,7 +25,6 @@ class MainActivity : AppCompatActivity() {
         val cbReplaceSpaceGlobal = findViewById<CheckBox>(R.id.cbReplaceSpaceGlobal)
         val btnSave = findViewById<Button>(R.id.btnSave)
 
-        // تحميل القيم المحفوظة
         etTriggerSymbol.setText(prefs.getString("trigger_symbol", ""))
         etAutoText.setText(prefs.getString("auto_text", ""))
         etSpeed.setText(prefs.getInt("auto_speed", 50).toString())
@@ -36,17 +35,16 @@ class MainActivity : AppCompatActivity() {
 
         btnSave.setOnClickListener {
             val speed = etSpeed.text.toString().toIntOrNull() ?: 50
-            
-            prefs.edit().apply {
-                putString("trigger_symbol", etTriggerSymbol.text.toString().trim())
-                putString("auto_text", etAutoText.text.toString())
-                putInt("auto_speed", speed)
-                putBoolean("enable_auto", cbEnableAuto.isChecked)
-                putBoolean("auto_replace_space", cbReplaceSpaceInAuto.isChecked)
-                putString("suffix_text", etSuffixText.text.toString())
-                putBoolean("global_replace_space", cbReplaceSpaceGlobal.isChecked)
-                apply()
-            }
+
+            val editor = prefs.edit()
+            editor.putString("trigger_symbol", etTriggerSymbol.text.toString().trim())
+            editor.putString("auto_text", etAutoText.text.toString())
+            editor.putInt("auto_speed", speed)
+            editor.putBoolean("enable_auto", cbEnableAuto.isChecked)
+            editor.putBoolean("auto_replace_space", cbReplaceSpaceInAuto.isChecked)
+            editor.putString("suffix_text", etSuffixText.text.toString())
+            editor.putBoolean("global_replace_space", cbReplaceSpaceGlobal.isChecked)
+            editor.apply()
 
             Toast.makeText(this, "تم حفظ الإعدادات بنجاح!", Toast.LENGTH_SHORT).show()
         }
