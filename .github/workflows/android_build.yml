@@ -9,9 +9,12 @@ jobs:
       with:
         distribution: 'temurin'
         java-version: '17'
-    - name: Build
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+    - name: Build APK
       run: gradle assembleDebug
     - uses: actions/upload-artifact@v4
       with:
         name: Keyboard-APK
         path: app/build/outputs/apk/debug/app-debug.apk
+        
