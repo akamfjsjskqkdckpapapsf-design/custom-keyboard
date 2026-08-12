@@ -13,5 +13,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "CustomKeyboard"
+rootProject.name = "custom-keyboard"
 include(":app")
