@@ -1,6 +1,8 @@
 package com.example.customkeyboard
 
+import android.app.AlertDialog
 import android.content.Context
+import android.graphics.Color
 import android.inputmethodservice.InputMethodService
 import android.inputmethodservice.Keyboard
 import android.inputmethodservice.KeyboardView
@@ -8,107 +10,159 @@ import android.os.Handler
 import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
+import android.view.WindowManager
+import android.widget.Button
+import org.json.JSONArray
 
 class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardActionListener {
 
     private var keyboardView: KeyboardView? = null
+    private var controlPanelView: View? = null
     private var arabicKeyboard: Keyboard? = null
-    private val handler = Handler(Looper.getMainLooper())
     private var isAutoRunning = false
+    private val handler = Handler(Looper.getMainLooper())
 
     override fun onCreateInputView(): View {
         keyboardView = layoutInflater.inflate(R.layout.keyboard_view, null) as KeyboardView
         arabicKeyboard = Keyboard(this, R.xml.kbd_arabic)
         keyboardView?.keyboard = arabicKeyboard
         keyboardView?.setOnKeyboardActionListener(this)
+
+        applyThemeAndSize()
         return keyboardView!!
     }
 
-    override fun onKey(primaryCode: Int, keyCodes: IntArray?) {
-        val inputConnection = currentInputConnection ?: return
+    private fun applyThemeAndSize() {
         val prefs = getSharedPreferences("KeyboardPrefs", Context.MODE_PRIVATE)
+        val themeIdx = prefs.getInt("theme_index", 0)
+        val fontIdx = prefs.getInt("font_size", 1)
 
-        val triggerSymbol = prefs.getString("trigger_symbol", "") ?: ""
-        val isAutoEnabled = prefs.getBoolean("enable_auto", false)
-        val globalReplaceSpace = prefs.getBoolean("global_replace_space", false)
+        val colors = arrayOf("#121212", "#000000", "#0A192F", "#004D40", "#3E2723", "#212121", "#B71C1C", "#4A148C", "#311B92", "#0277BD")
+        val bgColor = Color.parseColor(colors.getOrElse(themeIdx) { "#121212" })
+        keyboardView?.setBackgroundColor(bgColor)
+
+        val sizes = floatArrayOf(14f, 18f, 22f)
+        // تطبيق حجم الحروف اختياري
+    }
+
+    override fun onKey(primaryCode: Int, keyCodes: IntArray?) {
+        val ic = currentInputConnection ?: return
+        val prefs = getSharedPreferences("KeyboardPrefs", Context.MODE_PRIVATE)
+        val isDecoration = prefs.getBoolean("enable_decoration", false)
+        val symbol = prefs.getString("decoration_symbol", "~") ?: "~"
 
         when (primaryCode) {
-            -5 -> {
-                inputConnection.deleteSurroundingText(1, 0)
-            }
+            -5 -> ic.deleteSurroundingText(1, 0)
             -4 -> {
-                inputConnection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
-                inputConnection.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
+                ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
+                ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
             }
+            -100 -> showControlPanel()
             32 -> {
-                if (globalReplaceSpace) {
-                    inputConnection.commitText("~", 1)
+                if (isDecoration) {
+                    ic.commitText(symbol, 1)
                 } else {
-                    inputConnection.commitText(" ", 1)
+                    ic.commitText(" ", 1)
                 }
             }
-            else -> {
-                val charTyped = primaryCode.toChar().toString()
-                inputConnection.commitText(charTyped, 1)
-
-                if (isAutoEnabled && triggerSymbol.isNotEmpty()) {
-                    val beforeText = inputConnection.getTextBeforeCursor(triggerSymbol.length, 0)?.toString() ?: ""
-                    if (beforeText == triggerSymbol) {
-                        if (!isAutoRunning) {
-                            startAutoProcess()
-                        } else {
-                            isAutoRunning = false
-                        }
-                    }
-                }
-            }
+            else -> ic.commitText(primaryCode.toChar().toString(), 1)
         }
     }
 
-    private fun startAutoProcess() {
-        val prefs = getSharedPreferences("KeyboardPrefs", Context.MODE_PRIVATE)
-        val rawText = prefs.getString("auto_text", "") ?: ""
-        val speed = prefs.getInt("auto_speed", 50).toLong()
-        val replaceSpace = prefs.getBoolean("auto_replace_space", false)
-        val suffix = prefs.getString("suffix_text", "") ?: ""
+    private fun showControlPanel() {
+        val view = layoutInflater.inflate(R.layout.layout_control_panel, null)
 
-        if (rawText.isEmpty()) return
+        val btnStart = view.findViewById<Button>(R.id.btnStartAutoText)
+        val btnCliches = view.findViewById<Button>(R.id.btnShowClichesDialog)
+        val btnStop = view.findViewById<Button>(R.id.btnStopAutoText)
+        val btnBack = view.findViewById<Button>(R.id.btnBackToKeyboard)
+
+        btnStart.setOnClickListener {
+            startInteractiveTyping()
+        }
+
+        btnCliches.setOnClickListener {
+            showClichesInKeyboard()
+        }
+
+        btnStop.setOnClickListener {
+            isAutoRunning = false
+        }
+
+        btnBack.setOnClickListener {
+            setInputView(keyboardView)
+        }
+
+        setInputView(view)
+    }
+
+    private fun startInteractiveTyping() {
+        val prefs = getSharedPreferences("KeyboardPrefs", Context.MODE_PRIVATE)
+        val speed = prefs.getInt("speed_ms", 50).toLong()
+        val wordsCount = prefs.getInt("words_count", 6)
+        val jsonStr = prefs.getString("cliches_json", "[]") ?: "[]"
+        val array = JSONArray(jsonStr)
+
+        if (array.length() == 0) return
+
+        val allWords = ArrayList<String>()
+        for (i in 0 until array.length()) {
+            val line = array.getString(i)
+            allWords.addAll(line.split("\\s+".toRegex()))
+        }
+
+        if (allWords.isEmpty()) return
 
         isAutoRunning = true
-        val lines = rawText.split("\n")
-
         Thread {
-            for (line in lines) {
-                if (!isAutoRunning) break
-
-                var formattedLine = line
-                if (replaceSpace) {
-                    formattedLine = formattedLine.replace(" ", "~")
-                }
-                if (suffix.isNotEmpty()) {
-                    formattedLine += if (replaceSpace) "~$suffix" else " $suffix"
-                }
-
-                handler.post {
-                    val ic = currentInputConnection ?: return@post
-                    val triggerSymbol = prefs.getString("trigger_symbol", "") ?: ""
-                    if (triggerSymbol.isNotEmpty()) {
-                        ic.deleteSurroundingText(triggerSymbol.length, 0)
+            var index = 0
+            while (isAutoRunning && index < allWords.size) {
+                val chunk = ArrayList<String>()
+                for (j in 0 until wordsCount) {
+                    if (index < allWords.size) {
+                        chunk.add(allWords[index])
+                        index++
+                    } else {
+                        index = 0 // إعادة البدء من البداية عند انتهاء النص
+                        break
                     }
+                }
 
-                    ic.commitText(formattedLine, 1)
-                    ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
-                    ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
+                val sentence = chunk.joinToString(" ")
+                handler.post {
+                    val ic = currentInputConnection
+                    ic?.commitText(sentence, 1)
+                    ic?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
+                    ic?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
                 }
 
                 try {
-                    Thread.sleep((200 - speed).coerceAtLeast(10) * 10)
-                } catch (e: InterruptedException) {
+                    Thread.sleep(speed.coerceAtLeast(5))
+                } catch (e: Exception) {
                     break
                 }
             }
             isAutoRunning = false
         }.start()
+    }
+
+    private fun showClichesInKeyboard() {
+        val prefs = getSharedPreferences("KeyboardPrefs", Context.MODE_PRIVATE)
+        val jsonStr = prefs.getString("cliches_json", "[]") ?: "[]"
+        val array = JSONArray(jsonStr)
+        val list = ArrayList<String>()
+        for (i in 0 until array.length()) list.add(array.getString(i))
+
+        if (list.isEmpty()) return
+
+        val builder = AlertDialog.Builder(this)
+        builder.setTitle("اختر كليشة لإدراجها أو حذفها")
+        builder.setItems(list.toTypedArray()) { _, which ->
+            currentInputConnection?.commitText(list[which], 1)
+        }
+        val dialog = builder.create()
+        dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
+        dialog.show()
     }
 
     override fun onPress(primaryCode: Int) {}
