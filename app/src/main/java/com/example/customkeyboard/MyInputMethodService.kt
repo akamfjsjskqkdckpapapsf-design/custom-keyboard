@@ -25,9 +25,6 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         keyboardView?.keyboard = arabicKeyboard
         keyboardView?.setOnKeyboardActionListener(this)
 
-        // تفعيل المعاينة البصرية (المربع المفرد) عند ضغط الحرف
-        keyboardView?.isPreviewEnabled = true
-
         applyThemeAndSize()
         return keyboardView!!
     }
@@ -76,9 +73,8 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         val btnBack = view.findViewById<Button>(R.id.btnBackToKeyboard)
 
         btnStart.setOnClickListener {
-            // العودة فوراً للكيبورد لتظهر الكتابة البصرية والتفاعل
             keyboardView?.let { setInputView(it) }
-            startHumanLikeTyping()
+            startUniquePermutationTyping()
         }
 
         btnStop.setOnClickListener {
@@ -92,75 +88,86 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         setInputView(view)
     }
 
-    private fun startHumanLikeTyping() {
+    private fun startUniquePermutationTyping() {
         val prefs = getSharedPreferences("KeyboardPrefs", Context.MODE_PRIVATE)
         val speedMs = prefs.getInt("speed_ms", 50).toLong()
-        val wordsCount = prefs.getInt("words_count", 6)
+        val targetWordsCount = prefs.getInt("words_count", 4)
+        val isDecoration = prefs.getBoolean("enable_decoration", false)
+        val symbol = prefs.getString("decoration_symbol", "~") ?: "~"
+
         val jsonStr = prefs.getString("cliches_json", "[]") ?: "[]"
         val array = JSONArray(jsonStr)
 
         if (array.length() == 0) return
 
-        val allWords = ArrayList<String>()
+        // استخراج جميع الكلمات بدون تكرار
+        val wordPool = ArrayList<String>()
         for (i in 0 until array.length()) {
-            val line = array.getString(i)
-            allWords.addAll(line.split("\\s+".toRegex()))
+            val line = array.getString(i).trim()
+            if (line.isNotEmpty()) {
+                val wordsInLine = line.split("\\s+".toRegex())
+                for (w in wordsInLine) {
+                    if (w.isNotEmpty()) wordPool.add(w)
+                }
+            }
         }
 
-        if (allWords.isEmpty()) return
+        if (wordPool.isEmpty()) return
 
         isAutoRunning = true
 
         Thread {
-            var index = 0
+            // سجل لحفظ الجمل السابقة ومنع تكرار نفس الترتيب مطلقاً
+            val generatedSentences = HashSet<String>()
+            val maxWords = if (targetWordsCount > wordPool.size) wordPool.size else targetWordsCount
+
             while (isAutoRunning) {
-                val chunk = ArrayList<String>()
-                for (j in 0 until wordsCount) {
-                    if (index < allWords.size) {
-                        chunk.add(allWords[index])
-                        index++
-                    } else {
-                        index = 0
-                        if (allWords.isNotEmpty()) {
-                            chunk.add(allWords[index])
-                            index++
-                        }
+                var uniqueSentence = ""
+                var attempts = 0
+
+                // توليد جملة بخلط عشوائي مع التأكد أنها لم تتكرر سابقاً
+                while (attempts < 100) {
+                    wordPool.shuffle()
+                    val selectedWords = wordPool.take(maxWords)
+                    val joiner = if (isDecoration) symbol else " "
+                    val candidate = selectedWords.joinToString(joiner)
+
+                    if (!generatedSentences.contains(candidate)) {
+                        uniqueSentence = candidate
+                        generatedSentences.add(candidate)
+                        break
                     }
+                    attempts++
                 }
 
-                if (chunk.isEmpty()) break
+                // إذا استنفد التوليد الفريد للتركيبات، يتم إعادة مسح السجل والبدء بجولات جديدة
+                if (uniqueSentence.isEmpty()) {
+                    generatedSentences.clear()
+                    wordPool.shuffle()
+                    val selectedWords = wordPool.take(maxWords)
+                    val joiner = if (isDecoration) symbol else " "
+                    uniqueSentence = selectedWords.joinToString(joiner)
+                    generatedSentences.add(uniqueSentence)
+                }
 
-                val fullTextToType = chunk.joinToString(" ")
+                val sentenceToSend = uniqueSentence
 
-                // محاكاة ضغط حرف بعد حرف بالترتيب بأسلوب تفاعلي
-                for (char in fullTextToType) {
-                    if (!isAutoRunning) break
-
-                    val charCode = char.code
-
-                    handler.post {
-                        if (isAutoRunning) {
-                            // تنفيذ ضغطة الحرف وإعادة تنشيط رسم الواجهة لتبدو تفاعلية
-                            onKey(charCode, null)
+                handler.post {
+                    if (isAutoRunning) {
+                        val ic = currentInputConnection
+                        if (ic != null) {
+                            ic.commitText(sentenceToSend, 1)
+                            sendEnterKey()
                             keyboardView?.invalidateAllKeys()
                         }
-                    }
-
-                    try {
-                        Thread.sleep(speedMs.coerceAtLeast(10))
-                    } catch (e: Exception) { break }
-                }
-
-                // الضغط التلقائي على زر الإرسال / Enter بعد كل مجموعة كلمات
-                if (isAutoRunning) {
-                    handler.post {
-                        sendEnterKey()
                     }
                 }
 
                 try {
-                    Thread.sleep((speedMs * 2).coerceAtLeast(20))
-                } catch (e: Exception) { break }
+                    Thread.sleep(speedMs.coerceAtLeast(10))
+                } catch (e: Exception) {
+                    break
+                }
             }
         }.start()
     }
