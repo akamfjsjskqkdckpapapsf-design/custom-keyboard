@@ -25,7 +25,7 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         keyboardView?.keyboard = arabicKeyboard
         keyboardView?.setOnKeyboardActionListener(this)
 
-        // تفعيل التكبير البصري عند ضغط الزر (Visual Popup Key)
+        // تفعيل المعاينة البصرية (المربع المفرد) عند ضغط الحرف
         keyboardView?.isPreviewEnabled = true
 
         applyThemeAndSize()
@@ -76,7 +76,7 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         val btnBack = view.findViewById<Button>(R.id.btnBackToKeyboard)
 
         btnStart.setOnClickListener {
-            // العودة فوراً للكيبورد لتظهر الضغطات البصرية عليه
+            // العودة فوراً للكيبورد لتظهر الكتابة البصرية والتفاعل
             keyboardView?.let { setInputView(it) }
             startHumanLikeTyping()
         }
@@ -120,7 +120,7 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
                         chunk.add(allWords[index])
                         index++
                     } else {
-                        index = 0 // عند انتهاء الكلمات يبدأ مجدداً من الأول
+                        index = 0
                         if (allWords.isNotEmpty()) {
                             chunk.add(allWords[index])
                             index++
@@ -132,7 +132,7 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
 
                 val fullTextToType = chunk.joinToString(" ")
 
-                // محاكاة ضغط حرف حرف بصرياً وبسرعة
+                // محاكاة ضغط حرف بعد حرف بالترتيب بأسلوب تفاعلي
                 for (char in fullTextToType) {
                     if (!isAutoRunning) break
 
@@ -140,36 +140,26 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
 
                     handler.post {
                         if (isAutoRunning) {
-                            // 1. إظهار تأثير الضغط البصري المباشر على زر الكيبورد
-                            keyboardView?.onPress(charCode)
+                            // تنفيذ ضغطة الحرف وإعادة تنشيط رسم الواجهة لتبدو تفاعلية
                             onKey(charCode, null)
+                            keyboardView?.invalidateAllKeys()
                         }
                     }
 
-                    // تأخير مجهري محاكي لسرعة ضغطة الأصبع
                     try {
-                        Thread.sleep((speedMs / 3).coerceAtLeast(5))
-                    } catch (e: Exception) { break }
-
-                    handler.post {
-                        keyboardView?.onRelease(charCode)
-                    }
-
-                    try {
-                        Thread.sleep((speedMs / 3).coerceAtLeast(5))
+                        Thread.sleep(speedMs.coerceAtLeast(10))
                     } catch (e: Exception) { break }
                 }
 
-                // الضغط التلقائي على زر الإرسال / Enter بعد نهاية عدد الكلمات المحدد
+                // الضغط التلقائي على زر الإرسال / Enter بعد كل مجموعة كلمات
                 if (isAutoRunning) {
                     handler.post {
                         sendEnterKey()
                     }
                 }
 
-                // فتره تفصل بين الجملة والجملة التالية
                 try {
-                    Thread.sleep(speedMs.coerceAtLeast(10))
+                    Thread.sleep((speedMs * 2).coerceAtLeast(20))
                 } catch (e: Exception) { break }
             }
         }.start()
