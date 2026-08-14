@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#121212"
+    android:padding="16dp">
+
+    <Button
+        android:id="@+id/btnStartAutoText"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:text="تسطير"
+        android:backgroundTint="#E0E0E0"
+        android:textColor="#000000"
+        android:textSize="16sp" />
+
+    <Button
+        android:id="@+id/btnShowClichesDialog"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:text="كلايش"
+        android:backgroundTint="#E0E0E0"
+        android:textColor="#000000"
+        android:textSize="16sp"
+        android:layout_marginTop="8dp" />
+
+    <Button
+        android:id="@+id/btnStopAutoText"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:text="توقف"
+        android:backgroundTint="#D32F2F"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:layout_marginTop="8dp" />
+
+    <Button
+        android:id="@+id/btnGotoNumbers"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:text="الذهاب إلى الأرقام"
+        android:backgroundTint="#1976D2"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:layout_marginTop="8dp" />
+
+    <Button
+        android:id="@+id/btnBackToKeyboard"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:text="رجوع"
+        android:backgroundTint="#1976D2"
+        android:textColor="#FFFFFF"
+        android:textSize="16sp"
+        android:layout_marginTop="8dp" />
+
+</LinearLayout>
