@@ -1,6 +1,5 @@
 package com.example.customkeyboard
 
-import android.app.AlertDialog
 import android.content.Context
 import android.graphics.Color
 import android.inputmethodservice.InputMethodService
@@ -10,14 +9,12 @@ import android.os.Handler
 import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
-import android.view.WindowManager
 import android.widget.Button
 import org.json.JSONArray
 
 class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardActionListener {
 
     private var keyboardView: KeyboardView? = null
-    private var controlPanelView: View? = null
     private var arabicKeyboard: Keyboard? = null
     private var isAutoRunning = false
     private val handler = Handler(Looper.getMainLooper())
@@ -35,14 +32,10 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
     private fun applyThemeAndSize() {
         val prefs = getSharedPreferences("KeyboardPrefs", Context.MODE_PRIVATE)
         val themeIdx = prefs.getInt("theme_index", 0)
-        val fontIdx = prefs.getInt("font_size", 1)
 
         val colors = arrayOf("#121212", "#000000", "#0A192F", "#004D40", "#3E2723", "#212121", "#B71C1C", "#4A148C", "#311B92", "#0277BD")
         val bgColor = Color.parseColor(colors.getOrElse(themeIdx) { "#121212" })
         keyboardView?.setBackgroundColor(bgColor)
-
-        val sizes = floatArrayOf(14f, 18f, 22f)
-        // تطبيق حجم الحروف اختياري
     }
 
     override fun onKey(primaryCode: Int, keyCodes: IntArray?) {
@@ -73,7 +66,6 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         val view = layoutInflater.inflate(R.layout.layout_control_panel, null)
 
         val btnStart = view.findViewById<Button>(R.id.btnStartAutoText)
-        val btnCliches = view.findViewById<Button>(R.id.btnShowClichesDialog)
         val btnStop = view.findViewById<Button>(R.id.btnStopAutoText)
         val btnBack = view.findViewById<Button>(R.id.btnBackToKeyboard)
 
@@ -81,16 +73,12 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
             startInteractiveTyping()
         }
 
-        btnCliches.setOnClickListener {
-            showClichesInKeyboard()
-        }
-
         btnStop.setOnClickListener {
             isAutoRunning = false
         }
 
         btnBack.setOnClickListener {
-            setInputView(keyboardView)
+            keyboardView?.let { setInputView(it) }
         }
 
         setInputView(view)
@@ -114,55 +102,45 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         if (allWords.isEmpty()) return
 
         isAutoRunning = true
+        
+        // استخدام خيط منفصل مع إرسال الأوامر مباشرة لـ InputConnection
         Thread {
             var index = 0
-            while (isAutoRunning && index < allWords.size) {
+            while (isAutoRunning) {
                 val chunk = ArrayList<String>()
                 for (j in 0 until wordsCount) {
                     if (index < allWords.size) {
                         chunk.add(allWords[index])
                         index++
                     } else {
-                        index = 0 // إعادة البدء من البداية عند انتهاء النص
-                        break
+                        index = 0 // البدء من الجديد عند الانتهاء
+                        if (allWords.isNotEmpty()) {
+                            chunk.add(allWords[index])
+                            index++
+                        }
                     }
                 }
 
+                if (chunk.isEmpty()) break
+
                 val sentence = chunk.joinToString(" ")
+
                 handler.post {
                     val ic = currentInputConnection
-                    ic?.commitText(sentence, 1)
-                    ic?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
-                    ic?.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
+                    if (ic != null && isAutoRunning) {
+                        ic.commitText(sentence, 1)
+                        ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
+                        ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
+                    }
                 }
 
                 try {
-                    Thread.sleep(speed.coerceAtLeast(5))
+                    Thread.sleep(speed.coerceAtLeast(10))
                 } catch (e: Exception) {
                     break
                 }
             }
-            isAutoRunning = false
         }.start()
-    }
-
-    private fun showClichesInKeyboard() {
-        val prefs = getSharedPreferences("KeyboardPrefs", Context.MODE_PRIVATE)
-        val jsonStr = prefs.getString("cliches_json", "[]") ?: "[]"
-        val array = JSONArray(jsonStr)
-        val list = ArrayList<String>()
-        for (i in 0 until array.length()) list.add(array.getString(i))
-
-        if (list.isEmpty()) return
-
-        val builder = AlertDialog.Builder(this)
-        builder.setTitle("اختر كليشة لإدراجها أو حذفها")
-        builder.setItems(list.toTypedArray()) { _, which ->
-            currentInputConnection?.commitText(list[which], 1)
-        }
-        val dialog = builder.create()
-        dialog.window?.setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)
-        dialog.show()
     }
 
     override fun onPress(primaryCode: Int) {}
