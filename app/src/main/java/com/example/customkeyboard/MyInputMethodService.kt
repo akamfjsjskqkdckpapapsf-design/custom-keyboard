@@ -25,6 +25,9 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         keyboardView?.keyboard = arabicKeyboard
         keyboardView?.setOnKeyboardActionListener(this)
 
+        // تفعيل التكبير البصري عند ضغط الزر (Visual Popup Key)
+        keyboardView?.isPreviewEnabled = true
+
         applyThemeAndSize()
         return keyboardView!!
     }
@@ -46,10 +49,7 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
 
         when (primaryCode) {
             -5 -> ic.deleteSurroundingText(1, 0)
-            -4 -> {
-                ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
-                ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
-            }
+            -4 -> sendEnterKey()
             -100 -> showControlPanel()
             32 -> {
                 if (isDecoration) {
@@ -62,6 +62,12 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         }
     }
 
+    private fun sendEnterKey() {
+        val ic = currentInputConnection ?: return
+        ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
+        ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
+    }
+
     private fun showControlPanel() {
         val view = layoutInflater.inflate(R.layout.layout_control_panel, null)
 
@@ -70,7 +76,9 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         val btnBack = view.findViewById<Button>(R.id.btnBackToKeyboard)
 
         btnStart.setOnClickListener {
-            startInteractiveTyping()
+            // العودة فوراً للكيبورد لتظهر الضغطات البصرية عليه
+            keyboardView?.let { setInputView(it) }
+            startHumanLikeTyping()
         }
 
         btnStop.setOnClickListener {
@@ -84,9 +92,9 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         setInputView(view)
     }
 
-    private fun startInteractiveTyping() {
+    private fun startHumanLikeTyping() {
         val prefs = getSharedPreferences("KeyboardPrefs", Context.MODE_PRIVATE)
-        val speed = prefs.getInt("speed_ms", 50).toLong()
+        val speedMs = prefs.getInt("speed_ms", 50).toLong()
         val wordsCount = prefs.getInt("words_count", 6)
         val jsonStr = prefs.getString("cliches_json", "[]") ?: "[]"
         val array = JSONArray(jsonStr)
@@ -102,8 +110,7 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         if (allWords.isEmpty()) return
 
         isAutoRunning = true
-        
-        // استخدام خيط منفصل مع إرسال الأوامر مباشرة لـ InputConnection
+
         Thread {
             var index = 0
             while (isAutoRunning) {
@@ -113,7 +120,7 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
                         chunk.add(allWords[index])
                         index++
                     } else {
-                        index = 0 // البدء من الجديد عند الانتهاء
+                        index = 0 // عند انتهاء الكلمات يبدأ مجدداً من الأول
                         if (allWords.isNotEmpty()) {
                             chunk.add(allWords[index])
                             index++
@@ -123,22 +130,47 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
 
                 if (chunk.isEmpty()) break
 
-                val sentence = chunk.joinToString(" ")
+                val fullTextToType = chunk.joinToString(" ")
 
-                handler.post {
-                    val ic = currentInputConnection
-                    if (ic != null && isAutoRunning) {
-                        ic.commitText(sentence, 1)
-                        ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER))
-                        ic.sendKeyEvent(KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_ENTER))
+                // محاكاة ضغط حرف حرف بصرياً وبسرعة
+                for (char in fullTextToType) {
+                    if (!isAutoRunning) break
+
+                    val charCode = char.code
+
+                    handler.post {
+                        if (isAutoRunning) {
+                            // 1. إظهار تأثير الضغط البصري المباشر على زر الكيبورد
+                            keyboardView?.onPress(charCode)
+                            onKey(charCode, null)
+                        }
+                    }
+
+                    // تأخير مجهري محاكي لسرعة ضغطة الأصبع
+                    try {
+                        Thread.sleep((speedMs / 3).coerceAtLeast(5))
+                    } catch (e: Exception) { break }
+
+                    handler.post {
+                        keyboardView?.onRelease(charCode)
+                    }
+
+                    try {
+                        Thread.sleep((speedMs / 3).coerceAtLeast(5))
+                    } catch (e: Exception) { break }
+                }
+
+                // الضغط التلقائي على زر الإرسال / Enter بعد نهاية عدد الكلمات المحدد
+                if (isAutoRunning) {
+                    handler.post {
+                        sendEnterKey()
                     }
                 }
 
+                // فتره تفصل بين الجملة والجملة التالية
                 try {
-                    Thread.sleep(speed.coerceAtLeast(10))
-                } catch (e: Exception) {
-                    break
-                }
+                    Thread.sleep(speedMs.coerceAtLeast(10))
+                } catch (e: Exception) { break }
             }
         }.start()
     }
