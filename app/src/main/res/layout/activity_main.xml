@@ -13,143 +13,75 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="الزخرفة (الحقن التلقائي)"
+            android:text="إعدادات التسطير والنصوص الطويلة"
             android:textColor="#00E676"
             android:textSize="18sp"
             android:textStyle="bold" />
 
-        <Switch
-            android:id="@+id/swEnableDecoration"
+        <Button
+            android:id="@+id/btnImportTxt"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="تفعيل الزخرفة"
-            android:textColor="#FFFFFF"
-            android:layout_marginTop="8dp" />
+            android:text="استيراد ملف نصي (.txt)"
+            android:backgroundTint="#29B6F6"
+            android:textColor="#000000"
+            android:layout_marginTop="12dp" />
 
         <EditText
-            android:id="@+id/etDecorationSymbol"
+            android:id="@+id/etLongText"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="#222222"
+            android:layout_height="150dp"
+            android:background="#1E1E1E"
             android:textColor="#FFFFFF"
-            android:hint="رمز الاستبدال (مثلاً ~)"
-            android:textColorHint="#888888"
-            android:padding="8dp"
-            android:layout_marginTop="8dp" />
+            android:hint="أو ألصق النص الطويل هنا..."
+            android:textColorHint="#777777"
+            android:gravity="top|start"
+            android:padding="10dp"
+            android:layout_marginTop="10dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="المظهر والأداء"
-            android:textColor="#00E676"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginTop="16dp" />
-
-        <Spinner
-            android:id="@+id/spTheme"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="#222222"
-            android:layout_marginTop="8dp" />
-
-        <Spinner
-            android:id="@+id/spFontSize"
-            android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:background="#222222"
-            android:layout_marginTop="8dp" />
-
-        <TextView
-            android:id="@+id/tvSpeedValue"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="السرعة: 50ms"
+            android:text="عدد الكلمات في كل سطر:"
             android:textColor="#FFFFFF"
-            android:layout_marginTop="8dp" />
-
-        <SeekBar
-            android:id="@+id/sbSpeed"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:min="5"
-            android:max="150"
-            android:progress="50"
-            android:layout_marginTop="4dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="عدد كلمات التسطير:"
-            android:textColor="#FFFFFF"
-            android:layout_marginTop="8dp" />
+            android:layout_marginTop="14dp" />
 
         <EditText
-            android:id="@+id/etWordCount"
+            android:id="@+id/etWordsPerLine"
             android:layout_width="match_parent"
             android:layout_height="48dp"
-            android:background="#222222"
+            android:background="#1E1E1E"
             android:textColor="#FFFFFF"
             android:inputType="number"
             android:text="6"
             android:padding="8dp"
             android:layout_marginTop="4dp" />
 
-        <Button
-            android:id="@+id/btnSaveConfig"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="حفظ الإعدادات"
-            android:backgroundTint="#00E676"
-            android:textColor="#000000"
-            android:layout_marginTop="12dp" />
-
         <TextView
+            android:id="@+id/tvSpeedLabel"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="إدارة القوائم والكلايش"
-            android:textColor="#00E676"
-            android:textSize="18sp"
-            android:textStyle="bold"
-            android:layout_marginTop="20dp" />
-
-        <EditText
-            android:id="@+id/etNewCliché"
-            android:layout_width="match_parent"
-            android:layout_height="80dp"
-            android:background="#222222"
+            android:text="سرعة الكتابة: 50ms"
             android:textColor="#FFFFFF"
-            android:hint="أضف كليشة جديدة هنا..."
-            android:textColorHint="#888888"
-            android:gravity="top|start"
-            android:padding="8dp"
-            android:layout_marginTop="8dp" />
+            android:layout_marginTop="14dp" />
 
-        <LinearLayout
+        <SeekBar
+            android:id="@+id/sbSpeed"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:layout_marginTop="8dp">
+            android:min="10"
+            android:max="200"
+            android:progress="50"
+            android:layout_marginTop="4dp" />
 
-            <Button
-                android:id="@+id/btnAddCliché"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="إضافة"
-                android:backgroundTint="#424242"
-                android:textColor="#FFFFFF" />
-
-            <Button
-                android:id="@+id/btnShowClichés"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="عرض الكلايش"
-                android:backgroundTint="#424242"
-                android:textColor="#FFFFFF"
-                android:layout_marginStart="8dp" />
-        </LinearLayout>
+        <Button
+            android:id="@+id/btnSaveAll"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="حفظ الإعدادات بالنظام التسلسلي"
+            android:backgroundTint="#00E676"
+            android:textColor="#000000"
+            android:layout_marginTop="16dp" />
 
     </LinearLayout>
 </ScrollView>
