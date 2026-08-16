@@ -13,6 +13,7 @@ class MainActivity : Activity() {
 
     private val PICK_TXT_FILE = 101
     private lateinit var etLongText: EditText
+    private lateinit var btnImportTxt: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -40,7 +41,7 @@ class MainActivity : Activity() {
             override fun onStopTrackingTouch(seekBar: SeekBar?) {}
         })
 
-        findViewById<Button>(R.id.btnImportTxt).setOnClickListener {
+        btnImportTxt.setOnClickListener {
             val intent = Intent(Intent.ACTION_GET_CONTENT).apply {
                 type = "text/plain"
             }
@@ -58,10 +59,8 @@ class MainActivity : Activity() {
         }
     }
 
-    private lateinit var btnImportTxt: Button
-
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode: Int, resultCode: Int, data: Intent?)
+        super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == PICK_TXT_FILE && resultCode == RESULT_OK) {
             data?.data?.let { uri ->
                 val content = readTextFromUri(uri)
