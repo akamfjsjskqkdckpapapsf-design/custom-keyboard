@@ -13,6 +13,7 @@ class MainActivity : Activity() {
 
     private val PICK_TXT_FILE = 101
     private lateinit var etLongText: EditText
+    private lateinit var etSuffixText: EditText
     private lateinit var btnImportTxt: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -23,12 +24,14 @@ class MainActivity : Activity() {
 
         btnImportTxt = findViewById(R.id.btnImportTxt)
         etLongText = findViewById(R.id.etLongText)
+        etSuffixText = findViewById(R.id.etSuffixText)
         val etWordsPerLine = findViewById<EditText>(R.id.etWordsPerLine)
         val tvSpeedLabel = findViewById<TextView>(R.id.tvSpeedLabel)
         val sbSpeed = findViewById<SeekBar>(R.id.sbSpeed)
         val btnSaveAll = findViewById<Button>(R.id.btnSaveAll)
 
         etLongText.setText(prefs.getString("long_text_source", ""))
+        etSuffixText.setText(prefs.getString("suffix_text", ""))
         etWordsPerLine.setText(prefs.getInt("words_per_line", 6).toString())
         sbSpeed.progress = prefs.getInt("speed_ms", 50)
         tvSpeedLabel.text = "سرعة الكتابة: ${sbSpeed.progress}ms"
@@ -51,11 +54,12 @@ class MainActivity : Activity() {
         btnSaveAll.setOnClickListener {
             val editor = prefs.edit()
             editor.putString("long_text_source", etLongText.text.toString())
+            editor.putString("suffix_text", etSuffixText.text.toString())
             editor.putInt("words_per_line", etWordsPerLine.text.toString().toIntOrNull() ?: 6)
             editor.putInt("speed_ms", sbSpeed.progress)
-            editor.putInt("current_word_pointer", 0) // البدء دائماً من بداية النص
+            editor.putInt("current_word_pointer", 0) // البدء من البداية
             editor.apply()
-            Toast.makeText(this, "تم حفظ النص والإعدادات بنجاح!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "تم حفظ الإعدادات والمنشن بنجاح!", Toast.LENGTH_SHORT).show()
         }
     }
 
