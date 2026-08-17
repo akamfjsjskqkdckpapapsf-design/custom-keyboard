@@ -23,7 +23,7 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         keyboardView?.keyboard = arabicKeyboard
         keyboardView?.setOnKeyboardActionListener(this)
 
-        // تفعيل معايرة الضغطة المباشرة (تغيير لون/شكل الزر عند الضغط كما في المقطع)
+        // تفعيل المعاينة البصرية والتظليل عند الضغط
         keyboardView?.isPreviewEnabled = true
 
         return keyboardView!!
@@ -31,7 +31,7 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
 
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
-        // إيقاف التسطير تلقائياً فور الخروج من التطبيق أو حقل النص
+        // إيقاف التسطير تلقائياً فور الخروج من حقل الإدخال
         isAutoRunning = false
     }
 
@@ -62,7 +62,7 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
 
         btnStart.setOnClickListener {
             keyboardView?.let { setInputView(it) }
-            startSequentialTyping()
+            startSequentialTypingWithSuffix()
         }
 
         btnStop.setOnClickListener {
@@ -76,15 +76,15 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         setInputView(view)
     }
 
-    private fun startSequentialTyping() {
+    private fun startSequentialTypingWithSuffix() {
         val prefs = getSharedPreferences("KeyboardPrefs", Context.MODE_PRIVATE)
         val fullText = prefs.getString("long_text_source", "") ?: ""
+        val suffixText = prefs.getString("suffix_text", "")?.trim() ?: ""
         val wordsPerLine = prefs.getInt("words_per_line", 6)
         val speedMs = prefs.getInt("speed_ms", 50).toLong()
 
         if (fullText.trim().isEmpty()) return
 
-        // تقسيم النص إلى كلمات متسلسلة بدقة
         val wordsList = fullText.trim().split("\\s+".toRegex()).filter { it.isNotEmpty() }
         if (wordsList.isEmpty()) return
 
@@ -96,21 +96,24 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
             while (isAutoRunning) {
                 val lineWords = ArrayList<String>()
 
-                // قراءة الكلمات بالترتيب من البداية
+                // 1. أخذ عدد الكلمات المحددة من البداية
                 for (i in 0 until wordsPerLine) {
                     if (pointer >= wordsList.size) {
-                        pointer = 0 // عند وصول النهاية يرجع للبداية
+                        pointer = 0
                     }
                     lineWords.add(wordsList[pointer])
                     pointer++
                 }
 
-                // حفظ مؤشر الكلمة التالية لضمان عدم التكرار
                 prefs.edit().putInt("current_word_pointer", pointer).apply()
 
-                val lineToType = lineWords.joinToString(" ")
+                // 2. إلحاق المنشن أو النص الثابت إجبارياً بالنهاية إذا وجد
+                var lineToType = lineWords.joinToString(" ")
+                if (suffixText.isNotEmpty()) {
+                    lineToType += " $suffixText"
+                }
 
-                // محاكاة كتابة الحروف مع الضغط البصري
+                // 3. كتابة السطر حرفاً بحرف مع المحاكاة والتفاعل البصري
                 for (char in lineToType) {
                     if (!isAutoRunning) break
 
@@ -118,6 +121,8 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
                     handler.post {
                         if (isAutoRunning) {
                             onKey(charCode, null)
+                            // تحديث لوحة المفاتيح لتظهر تفاعلية الحروف بصرياً
+                            keyboardView?.invalidateAllKeys()
                         }
                     }
 
@@ -126,7 +131,7 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
                     } catch (e: Exception) { break }
                 }
 
-                // إرسال السطر فور اكتماله
+                // 4. الضغط الإجباري على زر الإرسال / Enter
                 if (isAutoRunning) {
                     handler.post { sendEnter() }
                 }
