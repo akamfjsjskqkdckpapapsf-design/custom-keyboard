@@ -9,13 +9,15 @@ import android.os.Looper
 import android.view.KeyEvent
 import android.view.View
 import android.widget.Button
+import java.util.concurrent.Executors
 
 class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardActionListener {
 
     private var keyboardView: KeyboardView? = null
     private var arabicKeyboard: Keyboard? = null
-    private var isAutoRunning = false
-    private val handler = Handler(Looper.getMainLooper())
+    @Volatile private var isAutoRunning = false
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private val executorService = Executors.newSingleThreadExecutor()
 
     override fun onCreateInputView(): View {
         keyboardView = layoutInflater.inflate(R.layout.keyboard_view, null) as KeyboardView
@@ -23,15 +25,15 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         keyboardView?.keyboard = arabicKeyboard
         keyboardView?.setOnKeyboardActionListener(this)
 
-        // تفعيل المعاينة البصرية والتظليل عند الضغط
-        keyboardView?.isPreviewEnabled = true
+        // تفعيل المعايرة البصرية المباشرة الضغط
+        keyboardView?.isPreviewEnabled = false
 
         return keyboardView!!
     }
 
     override fun onFinishInputView(finishingInput: Boolean) {
         super.onFinishInputView(finishingInput)
-        // إيقاف التسطير تلقائياً فور الخروج من حقل الإدخال
+        // إيقاف الكتابة فور الانتقال لمنطقة أخرى لمنع تعليق الكيبورد
         isAutoRunning = false
     }
 
@@ -62,7 +64,7 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
 
         btnStart.setOnClickListener {
             keyboardView?.let { setInputView(it) }
-            startSequentialTypingWithSuffix()
+            startSequentialTypingSmooth()
         }
 
         btnStop.setOnClickListener {
@@ -76,7 +78,25 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
         setInputView(view)
     }
 
-    private fun startSequentialTypingWithSuffix() {
+    private fun highlightKeyByChar(char: Char) {
+        val keys = arabicKeyboard?.keys ?: return
+        val targetCode = char.code
+
+        for (key in keys) {
+            if (key.codes.contains(targetCode)) {
+                key.pressed = true
+                keyboardView?.invalidateAllKeys()
+
+                mainHandler.postDelayed({
+                    key.pressed = false
+                    keyboardView?.invalidateAllKeys()
+                }, 40)
+                break
+            }
+        }
+    }
+
+    private fun startSequentialTypingSmooth() {
         val prefs = getSharedPreferences("KeyboardPrefs", Context.MODE_PRIVATE)
         val fullText = prefs.getString("long_text_source", "") ?: ""
         val suffixText = prefs.getString("suffix_text", "")?.trim() ?: ""
@@ -90,13 +110,13 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
 
         isAutoRunning = true
 
-        Thread {
+        // تشغيل العملية في خيط منفصل تماماً لتفادي رسالة "لا يستجيب"
+        executorService.execute {
             var pointer = prefs.getInt("current_word_pointer", 0)
 
             while (isAutoRunning) {
                 val lineWords = ArrayList<String>()
 
-                // 1. أخذ عدد الكلمات المحددة من البداية
                 for (i in 0 until wordsPerLine) {
                     if (pointer >= wordsList.size) {
                         pointer = 0
@@ -107,40 +127,46 @@ class MyInputMethodService : InputMethodService(), KeyboardView.OnKeyboardAction
 
                 prefs.edit().putInt("current_word_pointer", pointer).apply()
 
-                // 2. إلحاق المنشن أو النص الثابت إجبارياً بالنهاية إذا وجد
-                var lineToType = lineWords.joinToString(" ")
-                if (suffixText.isNotEmpty()) {
-                    lineToType += " $suffixText"
-                }
+                val lineToType = lineWords.joinToString(" ")
 
-                // 3. كتابة السطر حرفاً بحرف مع المحاكاة والتفاعل البصري
+                // 1. كتابة كلمات السطر حرفاً بحرف مع الضغط البصري
                 for (char in lineToType) {
                     if (!isAutoRunning) break
 
                     val charCode = char.code
-                    handler.post {
+                    mainHandler.post {
                         if (isAutoRunning) {
+                            highlightKeyByChar(char)
                             onKey(charCode, null)
-                            // تحديث لوحة المفاتيح لتظهر تفاعلية الحروف بصرياً
-                            keyboardView?.invalidateAllKeys()
                         }
                     }
 
                     try {
-                        Thread.sleep(speedMs.coerceAtLeast(10))
+                        Thread.sleep(speedMs.coerceAtLeast(15))
                     } catch (e: Exception) { break }
                 }
 
-                // 4. الضغط الإجباري على زر الإرسال / Enter
+                // 2. إضافة النص الملحق / المنشن ككتلة قاطعة وفصلها بمسافة مسقلة
+                if (isAutoRunning && suffixText.isNotEmpty()) {
+                    mainHandler.post {
+                        val ic = currentInputConnection
+                        ic?.commitText(" $suffixText", 1)
+                    }
+                    try {
+                        Thread.sleep(speedMs.coerceAtLeast(15))
+                    } catch (e: Exception) { break }
+                }
+
+                // 3. إرسال السطر معزولاً بدون كتابة إضافية بعده
                 if (isAutoRunning) {
-                    handler.post { sendEnter() }
+                    mainHandler.post { sendEnter() }
                 }
 
                 try {
-                    Thread.sleep((speedMs * 2).coerceAtLeast(20))
+                    Thread.sleep((speedMs * 2).coerceAtLeast(30))
                 } catch (e: Exception) { break }
             }
-        }.start()
+        }
     }
 
     override fun onPress(primaryCode: Int) {}
