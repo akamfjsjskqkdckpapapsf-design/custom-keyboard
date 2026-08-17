@@ -30,7 +30,7 @@
         <EditText
             android:id="@+id/etLongText"
             android:layout_width="match_parent"
-            android:layout_height="150dp"
+            android:layout_height="120dp"
             android:background="#1E1E1E"
             android:textColor="#FFFFFF"
             android:hint="أو ألصق النص الطويل هنا..."
@@ -38,6 +38,24 @@
             android:gravity="top|start"
             android:padding="10dp"
             android:layout_marginTop="10dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="المنشن / النص الملحق في نهاية كل سطر (اختياري):"
+            android:textColor="#FFFFFF"
+            android:layout_marginTop="14dp" />
+
+        <EditText
+            android:id="@+id/etSuffixText"
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:background="#1E1E1E"
+            android:textColor="#FFFFFF"
+            android:hint="مثال: يا حمد أو @username"
+            android:textColorHint="#777777"
+            android:padding="8dp"
+            android:layout_marginTop="4dp" />
 
         <TextView
             android:layout_width="wrap_content"
